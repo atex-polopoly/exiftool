@@ -48,17 +48,17 @@ execute 'MakeMaker' do
 end
 
 execute 'make' do
-  not_if { ::Dir.exist? "#{source_dir}/blib" }
-  only_if { ::File.exist? "#{source_dir}/Makefile" }
   user lowpriv_user
   cwd source_dir
+  only_if { ::File.exist? "#{source_dir}/Makefile" }
+  not_if { ::Dir.exist? "#{source_dir}/blib" }
 end
 
 execute 'make install' do
-  not_if { ::File.exists? '/usr/local/bin/exiftool' }
-  only_if { ::Dir.exist? "#{source_dir}/blib" }
   user 'root'
   cwd source_dir
+  only_if { ::Dir.exist? "#{source_dir}/blib" }
+  not_if { ::File.exists? '/usr/local/bin/exiftool' }
 end
 
 directory source_dir do
