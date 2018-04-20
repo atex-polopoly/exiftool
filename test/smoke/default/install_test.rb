@@ -5,14 +5,18 @@
 # The Inspec reference, with examples and extensive documentation, can be
 # found at http://inspec.io/docs/reference/resources/
 
-unless os.windows?
-  # This is an example test, replace with your own test.
-  describe user('root'), :skip do
-    it { should exist }
-  end
+describe file('/tmp/kitchen/cache/exiftool.tar.gz') do
+  it { should_not exist }
 end
 
-# This is an example test, replace it with your own test.
-describe port(80), :skip do
-  it { should_not be_listening }
+describe directory('/tmp/kitchen/cache/Image-ExifTool-10.93') do
+  it { should_not exist }
+end
+
+describe file('/usr/local/bin/exiftool') do
+  it { should exist }
+  it { should be_executable }
+  it { should be_executable.by('others') }
+  it { should be_grouped_into 'root' }
+  it { should be_owned_by 'root' }
 end
