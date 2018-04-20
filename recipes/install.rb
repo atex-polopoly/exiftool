@@ -7,26 +7,61 @@
 upstream = node['exiftool']['upstream']
 version = node['exiftool']['version']
 
+package 'perl-ExtUtils-MakeMaker'
+package 'automake'
+
+# A user for doing stuff that we don't (and shouldn't) be root to do
+lowpriv_user = 'chef'
+user lowpriv_user do
+  system true
+end
+
 tar = "#{Chef::Config[:file_cache_path]}/exiftool.tar.gz"
 remote_file tar do
   source "#{upstream}/Image-ExifTool-#{version}.tar.gz"
-  ftp_active_mode node['ftp_active_mode'] if upstream.start_with? 'ftp'
+  not_if { ::File.exists? '/usr/local/bin/exiftool' }
 end
 
 execute 'untar' do
   command "tar -xf #{tar}"
   cwd Chef::Config[:file_cache_path]
   only_if { ::File.exists? tar }
+  notifies :run, 'execute[chown]', :immediately
+end
+
+source_dir = "#{Chef::Config[:file_cache_path]}/Image-ExifTool-#{version}"
+execute 'chown' do
+  command "chown #{lowpriv_user}:#{lowpriv_user} #{source_dir}"
+  action :nothing
 end
 
 file tar do
   action :delete
 end
 
-dir = "#{Chef::Config[:file_cache_path]}/Image-ExifTool-#{version}"
-execute 'Makefile.pl' do
+execute 'MakeMaker' do
   command 'perl Makefile.PL'
-  cwd dir
-  only_if { ::Dir.exist? dir }
-  not_if { ::File.exist? "#{dir}/Makefile" }
+  cwd source_dir
+  user lowpriv_user
+  only_if { ::Dir.exist? source_dir }
+  not_if { ::File.exist? "#{source_dir}/Makefile" }
+end
+
+execute 'make' do
+  not_if { ::Dir.exist? "#{source_dir}/blib" }
+  only_if { ::File.exist? "#{source_dir}/Makefile" }
+  user lowpriv_user
+  cwd source_dir
+end
+
+execute 'make install' do
+  not_if { ::File.exists? '/usr/local/bin/exiftool' }
+  only_if { ::Dir.exist? "#{source_dir}/blib" }
+  user 'root'
+  cwd source_dir
+end
+
+directory source_dir do
+  action :delete
+  recursive true
 end
